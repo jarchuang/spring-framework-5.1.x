@@ -243,7 +243,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		final String beanName = transformedBeanName(name);
 		Object bean;
 
-		// 单纯理解尝试从缓存中获取 bean
+		// 单纯理解尝试从缓存中获取 bean；有可能为空;这个方法会将三级缓存中对象挪到二级缓存
 		Object sharedInstance = getSingleton(beanName);
 		// 如果已经存在则返回
 		if (sharedInstance != null && args == null) {
@@ -319,6 +319,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 				// 创建单例bean
 				if (mbd.isSingleton()) {
+					//getSingleton ；里边的addSingleton将对象从二级缓存挪到一级缓存
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
 							// 创建 bean
