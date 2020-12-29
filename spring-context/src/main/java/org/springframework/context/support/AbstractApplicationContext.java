@@ -527,14 +527,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 			/*
 				Tell the subclass to refresh the internal bean factory.
-			 	获取BeanFactory；默认实现是DefaultListableBeanFactory
-                加载BeanDefition 并注册到 BeanDefitionRegistry
+			 	1. 获取新的BeanFactory（销毁原有beanFactory）；默认实现是DefaultListableBeanFactory
+                2. 加载BeanDefition 并注册到 BeanDefitionRegistry(Defition在Registry中的位置：https://raw.githubusercontent.com/jarchuang/picBed/dev/img/BeanDefinitionRegistry%E4%B8%AD%E7%9A%84DefinitionMaps.png)
+                注意，此处是获取新的，销毁旧的，这就是刷新的意义
 			 */
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			/*
 				Prepare the bean factory for use in this context.
-				BeanFactory的预准备工作（BeanFactory进行一些设置，比如context的类加载器等）
+				1. BeanFactory的预准备工作（BeanFactory进行一些设置，比如context的类加载器等）
 			 */
 			prepareBeanFactory(beanFactory);
 
@@ -542,18 +543,23 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				/*
 					Allows post-processing of the bean factory in context subclasses.
 					BeanFactory准备工作完成后进行的后置处理工作
+					1. 模板方法；允许子类中对beanFactory进行后置处理；也就配置好BeanFactory之后可以插入用户业务代码，在这一步我理解是将这些业务代码准备好（用于后续的反射调用）
 				 */
 				postProcessBeanFactory(beanFactory);
 
 				/*
 					Invoke factory processors registered as beans in the context.
 					实例化实现了BeanFactoryPostProcessor接口的Bean，并调用接口方法
+					1. 就是调用实现了接口的类的方法；这里根据我debug是只加载了spring自己实现接口的类（实现的是BeanFactoryPostProcessor）；不是用户的Processors（业务上我目前没有遇到过需要在刷新工厂就需要执行业务代码的需求）
 				 */
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				/*
 					Register bean processors that intercept bean creation.
 					注册BeanPostProcessor（Bean的后置处理器），在创建bean的前后等执行
+					1. 实例化和注册beanFactory中扩展了BeanPostProcessor的bean。（核心方法；目前我理解到AOP都会跟这个方法相关哦）
+					譬如：@PostConstruct ，就是生成有一个BeanPostProcessor；在bean实例化之后，会调用这个注解注释的方法
+
 				 */
 				registerBeanPostProcessors(beanFactory);
 
@@ -587,13 +593,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 					初始化创建非懒加载方式的单例Bean实例（未设置属性）
                     填充属性
                     初始化方法调用（比如调用afterPropertiesSet方法、init-method方法）
-                    调用BeanPostProcessor（后置处理器）对实例bean进行后置处理
+                    调用BeanPostProcessor（后置处理器）对实例bean进行后置处理 （实例化bean的前后执行用户的代码）
+
 				 */
 				finishBeanFactoryInitialization(beanFactory);
 
 				/*
 					Last step: publish corresponding event.
 					完成context的刷新。主要是调用LifecycleProcessor的onRefresh()方法，并且发布事件（ContextRefreshedEvent）
+
 				 */
 				finishRefresh();
 			}
@@ -605,9 +613,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				}
 
 				// Destroy already created singletons to avoid dangling resources.
+				//如果刷新失败那么就会将已经创建好的单例Bean销毁掉
 				destroyBeans();
 
 				// Reset 'active' flag.
+				//重置context的活动状态 告知是失败的
 				cancelRefresh(ex);
 
 				// Propagate exception to caller.
@@ -617,6 +627,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			finally {
 				// Reset common introspection caches in Spring's core, since we
 				// might not ever need metadata for singleton beans anymore...
+				//失败与否，都会重置Spring内核的缓存。因为不再需要metadata元数据给单例Bean了
 				resetCommonCaches();
 			}
 		}
