@@ -137,6 +137,9 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	private final Map<Object, Class<?>> proxyTypes = new ConcurrentHashMap<>(16);
 
+	/**
+	 * 标识当前bean是否需要被代理
+	 */
 	private final Map<Object, Boolean> advisedBeans = new ConcurrentHashMap<>(256);
 
 
@@ -287,6 +290,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	}
 
 	/**
+	 * bean初始化 后置处理方法
 	 * Create a proxy with the configured interceptors if the bean is
 	 * identified as one to proxy by the subclass.
 	 * @see #getAdvicesAndAdvisorsForBean
@@ -296,6 +300,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		if (bean != null) {
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
 			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
+				//如果需要，为bean生成代理对象
 				return wrapIfNecessary(bean, beanName, cacheKey);
 			}
 		}
@@ -338,6 +343,12 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
 			return bean;
 		}
+
+		/*
+		 * 如果是基础设施类（Pointcut、Advice、Advisor 等接口的实现类），或是应该跳过的类，
+		 * 则不应该生成代理，此时直接返回 bean
+		 * 我理解的是每一个初始化完成的bean都会来到这个方法进行匹配
+		 */
 		if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
 			this.advisedBeans.put(cacheKey, Boolean.FALSE);
 			return bean;
@@ -346,11 +357,21 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		// Create proxy if we have advice.
 		// 查找出和当前bean匹配的advisor
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+
+		/*
+		 * 若 specificInterceptors != null（没有找到当前bean匹配的advisor），即 specificInterceptors != DO_NOT_PROXY，
+		 * 则为 bean 生成代理对象，否则直接返回 bean
+		 */
 		if (specificInterceptors != DO_NOT_PROXY) {
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
+			//创建代理
 			Object proxy = createProxy(
 					bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
 			this.proxyTypes.put(cacheKey, proxy.getClass());
+			/*
+			 * 返回代理对象，此时 IOC 容器输入 bean，得到 proxy。此时，
+			 * beanName 对应的 bean 是代理对象，而非原始的 bean
+			 */
 			return proxy;
 		}
 

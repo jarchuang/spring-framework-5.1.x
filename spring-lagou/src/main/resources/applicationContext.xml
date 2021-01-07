@@ -36,5 +36,11 @@
 		</aop:aspect>
 	</aop:config>
 
+	<!--<aop:config>-->
+		<!--<aop:aspect ref="logUtils">-->
+			<!--<aop:before method="beforeMethod" pointcut="execution(public void com.lagou.edu.ItBean.print())"/>-->
+		<!--</aop:aspect>-->
+	<!--</aop:config>-->
+
 
 </beans>
