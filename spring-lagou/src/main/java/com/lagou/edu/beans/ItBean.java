@@ -1,4 +1,4 @@
-package com.lagou.edu;
+package com.lagou.edu.beans;
 
 /**
  * @author 应癫

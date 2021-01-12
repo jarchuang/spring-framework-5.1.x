@@ -1,4 +1,4 @@
-import com.lagou.edu.LagouBean;
+import com.lagou.edu.beans.LagouBean;
 import org.junit.Test;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
